@@ -63,6 +63,7 @@ enum lttng_event_type {
 	LTTNG_EVENT_FUNCTION_ENTRY            = 3,
 	LTTNG_EVENT_NOOP                      = 4,
 	LTTNG_EVENT_SYSCALL                   = 5,
+  LTTNG_EVENT_DYN                       = 6,
 };
 
 /*
@@ -210,6 +211,23 @@ struct lttng_event_probe_attr {
 };
 
 /*
+ * Dynamic tracing event attributes
+ *
+ * Function name and variable name are given for now
+ *
+ * Intialize structures to zero before use
+ */
+
+#define LTTNG_EVENT_DYN_PADDING1           16
+struct lttng_event_dyn_attr {
+  char bin_name[LTTNG_SYMBOL_NAME_LEN];
+  char func_name[LTTNG_SYMBOL_NAME_LEN];
+  char var_name[LTTNG_SYMBOL_NAME_LEN];
+
+  char padding[LTTNG_EVENT_PROBE_PADDING1];
+};
+
+/*
  * Function tracer
  *
  * The structures should be initialized to zero before use.
@@ -245,6 +263,7 @@ struct lttng_event {
 	union {
 		struct lttng_event_probe_attr probe;
 		struct lttng_event_function_attr ftrace;
+    struct lttng_event_dyn_attr dyn;
 
 		char padding[LTTNG_EVENT_PADDING2];
 	} attr;

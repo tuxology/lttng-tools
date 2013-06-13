@@ -39,6 +39,7 @@ static int opt_userspace;
 static int opt_jul;
 static int opt_enable_all;
 static char *opt_probe;
+static char *opt_dyn;
 static char *opt_function;
 static char *opt_function_entry_symbol;
 static char *opt_channel_name;
@@ -61,6 +62,7 @@ enum {
 	OPT_LOGLEVEL_ONLY,
 	OPT_LIST_OPTIONS,
 	OPT_FILTER,
+  OPT_DYN,
 };
 
 static struct lttng_handle *handle;
@@ -77,6 +79,7 @@ static struct poptOption long_options[] = {
 	{"tracepoint",     0,   POPT_ARG_NONE, 0, OPT_TRACEPOINT, 0, 0},
 	{"probe",          0,   POPT_ARG_STRING, &opt_probe, OPT_PROBE, 0, 0},
 	{"function",       0,   POPT_ARG_STRING, &opt_function, OPT_FUNCTION, 0, 0},
+	{"dynamic",        0,   POPT_ARG_STRING, &opt_dyn, OPT_DYN, 0, 0},
 #if 0
 	/*
 	 * Currently removed from lttng kernel tracer. Removed from
@@ -124,6 +127,9 @@ static void usage(FILE *ofp)
 	fprintf(ofp, "                           Dynamic function entry/return probe.\n");
 	fprintf(ofp, "                           Addr and offset can be octal (0NNN...),\n");
 	fprintf(ofp, "                           decimal (NNN...) or hexadecimal (0xNNN...)\n");
+	fprintf(ofp, "    --dynamic [function:variable]\n");
+	fprintf(ofp, "                           Put tracepoint at function and get\n");
+	fprintf(ofp, "                           value of variable,\n");
 #if 0
 	fprintf(ofp, "    --function:entry symbol\n");
 	fprintf(ofp, "                           Function tracer event\n");
@@ -261,6 +267,75 @@ static int parse_probe_opts(struct lttng_event *ev, char *opt)
 end:
 	return ret;
 }
+
+/*
+ * Parse dynamic tracepoint options
+ */
+
+static int parse_dyn_opts(struct lttng_event *ev, char *opt){
+
+	int ret=0;
+	char bin_name[LTTNG_SYMBOL_NAME_LEN];
+  char func_name[LTTNG_SYMBOL_NAME_LEN];
+  char var_name[LTTNG_SYMBOL_NAME_LEN];
+
+  memset(var_name, 0, LTTNG_SYMBOL_NAME_LEN);
+
+	if (opt == NULL) {
+		ret = -1;
+		goto end;
+	}
+
+  /*
+   * Parse name of binary, function and variable and store it in the struct
+   */
+  int index = 0;
+  int bin_index=0;
+  while (opt[index] != ':' && opt[index] != '\0'){
+    if (opt[index] != ' ')
+      bin_name[bin_index++] = opt[index];
+    index++;
+  }
+  bin_name[bin_index] = '\0';
+  index++;
+
+  //function 
+  int func_index=0;
+  while (opt[index] != ':' && opt[index] != '\0'){
+    if (opt[index] != ' ')
+      func_name[func_index++] = opt[index];
+    index++;
+  }
+  func_name[func_index] = '\0';
+
+  //variable
+  index++;
+  int var_index=0;
+  while (opt[index] != '\0'){
+    if(opt[index] != ' ' && opt[index] != ':'){
+      var_name[var_index] = opt[index];
+      var_index++;
+    }
+    index++;
+  }
+  var_name[var_index] = '\0';
+
+  //copy to sruct
+  strncpy(ev->attr.dyn.bin_name, bin_name, LTTNG_SYMBOL_NAME_LEN);
+  strncpy(ev->attr.dyn.func_name, func_name, LTTNG_SYMBOL_NAME_LEN);
+  strncpy(ev->attr.dyn.var_name, var_name, LTTNG_SYMBOL_NAME_LEN);
+
+#if 0
+  printf("SUCHAKRA_DBG binary:%s\n", ev->attr.dyn.bin_name);
+  printf("SUCHAKRA_DBG func:%s\n", ev->attr.dyn.func_name);
+  printf("SUCHAKRA_DBG var:%s\n", ev->attr.dyn.var_name);
+#endif
+
+end:
+return ret;
+
+}
+
 
 /*
  * Maps loglevel from string to value
@@ -566,7 +641,18 @@ static int enable_events(char *session_name)
 			case LTTNG_EVENT_FUNCTION:
 			case LTTNG_EVENT_FUNCTION_ENTRY:
 			case LTTNG_EVENT_SYSCALL:
-			default:
+      case LTTNG_EVENT_DYN:
+        ret = parse_dyn_opts(&ev, opt_dyn);
+				if (ret < 0) {
+					ERR("Unable to parse dynamic tracing options");
+					ret = 0;
+					goto error;
+				}
+        ev.type = LTTNG_EVENT_DYN;
+			  strncpy(ev.name, event_name, LTTNG_SYMBOL_NAME_LEN);
+				ev.name[LTTNG_SYMBOL_NAME_LEN - 1] = '\0';
+        break;
+      default:
 				ERR("Event type not available for user-space tracing");
 				ret = CMD_UNSUPPORTED;
 				goto error;
@@ -702,7 +788,10 @@ int cmd_enable_events(int argc, const char **argv)
 		case OPT_SYSCALL:
 			opt_event_type = LTTNG_EVENT_SYSCALL;
 			break;
-		case OPT_USERSPACE:
+    case OPT_DYN:
+      opt_event_type = LTTNG_EVENT_DYN;
+      break;
+    case OPT_USERSPACE:
 			opt_userspace = 1;
 			break;
 		case OPT_LOGLEVEL:
