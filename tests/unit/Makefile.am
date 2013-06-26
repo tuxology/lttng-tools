@@ -1,6 +1,8 @@
 AM_CFLAGS = -I$(top_srcdir)/include -I$(top_srcdir)/src -I$(top_srcdir)/tests/utils/ -I$(srcdir)
 AM_LDFLAGS =
 
+
+
 if LTTNG_TOOLS_BUILD_WITH_LIBDL
 AM_LDFLAGS += -ldl
 endif
@@ -39,6 +41,7 @@ SESSIONS=$(top_builddir)/src/bin/lttng-sessiond/session.o	\
 
 
 test_session_SOURCES = test_session.c
+nodist_EXTRA_test_session_SOURCES = dummy.cxx
 test_session_LDADD = $(LIBTAP) $(LIBCOMMON) $(LIBRELAYD) $(LIBSESSIOND_COMM) \
 		     $(LIBHASHTABLE) -lrt
 test_session_LDADD += $(SESSIONS)
@@ -57,6 +60,7 @@ UST_DATA_TRACE=$(top_builddir)/src/bin/lttng-sessiond/trace-ust.o \
 		   $(top_builddir)/src/bin/lttng-sessiond/session.o \
 		   $(top_builddir)/src/bin/lttng-sessiond/snapshot.o \
 		   $(top_builddir)/src/bin/lttng-sessiond/jul.o \
+		   $(top_builddir)/src/bin/lttng-sessiond/mutator-ust.o \
 		   $(top_builddir)/src/common/.libs/uri.o \
 		   $(top_builddir)/src/common/.libs/utils.o \
 		   $(top_builddir)/src/common/health/libhealth.la \

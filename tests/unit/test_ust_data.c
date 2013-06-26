@@ -30,7 +30,7 @@
 #include <common/defaults.h>
 #include <bin/lttng-sessiond/trace-ust.h>
 #include <bin/lttng-sessiond/ust-app.h>
-
+#include <bin/lttng-sessiond/mutator-ust.h>
 #include <tap/tap.h>
 
 /* This path will NEVER be created in this test */

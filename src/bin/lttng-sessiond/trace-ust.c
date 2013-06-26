@@ -28,6 +28,7 @@
 #include "buffer-registry.h"
 #include "trace-ust.h"
 #include "utils.h"
+#include "mutator-ust.h"
 
 /*
  * Match function for the events hash table lookup.
@@ -320,7 +321,7 @@ struct ltt_ust_event *trace_ust_create_event(struct lttng_event *ev,
 		struct lttng_filter_bytecode *filter)
 {
 	struct ltt_ust_event *lue;
-
+  int ret;
 	assert(ev);
 
 	lue = zmalloc(sizeof(struct ltt_ust_event));
@@ -344,6 +345,26 @@ struct ltt_ust_event *trace_ust_create_event(struct lttng_event *ev,
 		break;
   case LTTNG_EVENT_DYN:
     lue->attr.instrumentation = LTTNG_UST_TRACEPOINT;
+    /* 
+     * TODO : SUCHAKRA - create and use the mutator tool to instrument and
+     * write back the binary for readying the tracepoints. Use the values
+     * ev->attr.dyn.bin_name , ev->attr.dyn.func_name , ev->attr.dyn.var_name
+     * and pass to mutator and write back the binary to complete tracepoint
+     * insertion
+     */
+    DBG2("Setting up dynamic tracepoint in %s", ev->attr.dyn.bin_name);
+
+    ret = insert_dynamic_tp(ev);
+    /* 
+     * TODO : New form - insert_dynamic_tp(ev, <dyn tracepoint type enums>)
+     * where tracepoint type enum has things like DYN_TP_INT, DYN_TP_STRING
+     * so that you can set type of tracepoints to be dynamically insrtd
+     */
+    if (!ret){
+      PERROR("OUCH, says the mutator! I could not insert tracepoint");
+      goto error;
+    }
+
     break;
   default:
 		ERR("Unknown ust instrumentation type (%d)", ev->type);

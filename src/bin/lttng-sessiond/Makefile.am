@@ -7,10 +7,11 @@ AM_CFLAGS = -fno-strict-aliasing
 bin_PROGRAMS = lttng-sessiond
 
 lttng_sessiond_SOURCES = utils.c utils.h \
+                       mutator-ust.cpp mutator-ust.h \
                        trace-kernel.c trace-kernel.h \
                        kernel.c kernel.h \
                        ust-ctl.h ust-app.h trace-ust.h ust-thread.h \
-                       ust-registry.h \
+											 ust-registry.h \
                        context.c context.h \
                        channel.c channel.h \
                        event.c event.h \
@@ -40,6 +41,7 @@ lttng_sessiond_SOURCES += lttng-sessiond.h main.c
 
 # link on liblttngctl for check if sessiond is already alive.
 lttng_sessiond_LDADD = -lrt -lurcu-common -lurcu \
+											-L/usr/lib64/dyninst -ldyninstAPI \
 		$(top_builddir)/src/lib/lttng-ctl/liblttng-ctl.la \
 		$(top_builddir)/src/common/sessiond-comm/libsessiond-comm.la \
 		$(top_builddir)/src/common/kernel-ctl/libkernel-ctl.la \
